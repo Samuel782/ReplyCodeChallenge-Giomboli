@@ -1,33 +1,55 @@
-## Come calcolare il rischio reale di ciascun nodo:
-##	1.	Il nodo A ha N nodi adiacenti. Per ogni coppia di nodi tra questi N, viene calcolato un valore di rischio.
-##	2.	Il massimo valore calcolato tra queste coppie rappresenta il rischio reale del nodo A.
-##	3.	Il valore del rischio è calcolato come la media tra il rischio stimato del nodo A e il rischio reale del nodo adiacente, arrotondato per eccesso.
-##	4.	Se il rischio reale di un nodo adiacente non è disponibile, viene utilizzato il suo rischio stimato.
-##	5.	Il rischio reale di un nodo non può mai essere inferiore al suo rischio stimato. Se il valore calcolato è inferiore, il rischio reale viene impostato uguale al rischio stimato.
-##Questo processo deve essere ripetuto per tutti i nodi, garantendo una valutazione completa e aggiornata dei rischi. L’output finale conterrà il rischio reale di tutti i Servizi Chiave della rete.
+import math
+
+def calcola_rischio_reale(nodi):
+    rischio_reale = {nodo_id: nodi[nodo_id][0] for nodo_id in nodi}  # Inizializziamo il rischio reale con il rischio stimato
+
+    aggiornato = True
+    while aggiornato:  # Ripetiamo fino a quando i rischi reali non smettono di aggiornarsi
+        aggiornato = False
+        for nodo_id, (rischio_stimato, adiacenti) in nodi.items():
+            massimo_rischio = rischio_stimato
+            for adiacente in adiacenti:
+                if adiacente in rischio_reale:
+                    rischio_calcolato = (rischio_reale[adiacente] + rischio_stimato + 1) // 2  # Arrotondiamo per eccesso
+                    massimo_rischio = max(massimo_rischio, rischio_calcolato)
+            if massimo_rischio > rischio_reale[nodo_id]:  # Aggiorniamo il rischio reale se necessario
+                rischio_reale[nodo_id] = massimo_rischio
+                aggiornato = True
+
+    return rischio_reale
 
 
-with open("input.txt", "r") as file:
-    content = file.readlines()
+def leggi_input_da_file(file_path):
+    with open(file_path, "r") as file:
+        num_casi = int(file.readline().strip())  # Numero di casi di test
 
-if not content:
-    raise ValueError("Il file è vuoto")
+        # Creiamo il file di output
+        with open("output.txt", "w") as output_file:
+            for case_num in range(1, num_casi + 1):
+                num_nodi = int(file.readline().strip())  # Numero di nodi
+                nodi = {}
 
-# Legge il primo numero
-num_iterations = int(content[0].strip())
+                for _ in range(num_nodi):
+                    dati = file.readline().strip().split()
+                    nodo_id = dati[0]
+                    rischio_stimato = int(dati[1])
+                    adiacenti = dati[2:] if len(dati) > 2 else []  # Lista di ID dei nodi connessi
 
-index = 1
+                    nodi[nodo_id] = (rischio_stimato, adiacenti)
 
-for _ in range(num_iterations):
-    if index >= len(content):
-        raise ValueError("Il file non ha abbastanza righe per completare tutte le iterazioni")
+                # Calcola il rischio reale per i nodi
+                rischio_reale = calcola_rischio_reale(nodi)
+       
+                # Filtra solo i nodi di tipo 'k' (Servizi Chiave) e ordina per ID
+                servizi_chiave = {nodo_id: rischio_reale[nodo_id] for nodo_id in nodi if nodo_id[0] == 'k'}
+                servizi_chiave_ordinati = sorted(servizi_chiave.items())
 
-    # Legge il numero di righe da estrarre
-    num_lines = int(content[index].strip())
-    index += 1  # Sposta l'indice alla prima riga da leggere
-    # Legge le successive `num_lines` righe
-    extracted_lines = [content[i].strip() for i in range(index, min(index + num_lines, len(content)))]
-    index += num_lines  # Aggiorna l'indice per la prossima iterazione
+                # Scriviamo il risultato per ogni caso di test nel formato richiesto
+                output_file.write(f"Case #{case_num}: {len(servizi_chiave)} ")
+                for nodo, rischio in servizi_chiave_ordinati:
+                    output_file.write(f"{nodo} {rischio} ")
+                output_file.write("\n")
 
-    for line in extracted_lines:
-        print(line)
+# Esegui il programma passando il percorso del file
+file_path = "input.txt"  # Modifica questo percorso con il percorso del tuo file di testo
+leggi_input_da_file(file_path)
